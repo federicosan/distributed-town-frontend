@@ -16,12 +16,40 @@ const Store = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [userInfo, setUserInfo] = useState({ nickname: "", skills: [] });
   const [token, setToken] = useState("");
+  
+  
+  async function saveCommunityContractToUserContext() {
+    const provider = new ethers.providers.Web3Provider(magic.rpcProvider);
+
+    try {
+      const signer = provider.getSigner();
+
+      // Get user's Ethereum public address
+      const address = await signer.getAddress();
+
+      const contractABI = communityContractAbi;
+      const contractAddress = "0x790697f595Aa4F9294566be0d262f71b44b5039c";
+      const contract = new ethers.Contract(
+        contractAddress,
+        contractABI,
+        signer
+      );
+      setUserInfo({
+        ...userInfo,
+        communityContract: { address: contractAddress },
+      });
+
+    }catch(err){
+        console.log(err);
+      }
+    }
+
 
   useEffect(() => {
     setIsLoading(true);
 
     /* We initialize Magic in `useEffect` so it has access to the global `window` object inside the browser */
-    let m = new Magic('pk_live_9FE80BF9C9AF42BB', {
+    let m = new Magic('pk_test_1C5A2BC69B7C18E5', {
       network: "ropsten",
     });
     setMagic(m);
@@ -29,23 +57,27 @@ const Store = ({ children }) => {
 
   useEffect(() => {
     (async () => {
-      if (typeof magic !== "undefined") {
-        /* If the user has a valid session with our server, it will return {authorized: true, user: user} */
-        let loggedIn = false;
-        if (magic && magic.user) {
-          loggedIn = await magic.user.isLoggedIn();
+      try{
+        if (typeof magic !== "undefined") {
+          /* If the user has a valid session with our server, it will return {authorized: true, user: user} */
+          let loggedIn = false;
+          if (magic && magic.user) {
+            loggedIn = await magic.user.isLoggedIn();
+          }
+  
+          /* If db returns {authorized: false}, there is no valid session, so log user out of their session with Magic if it exists */
+          // if (!loggedIn) {
+          //   await magic.user.logout();
+          // }
+  
+          console.log("LOGGEDIN");
+          console.log(loggedIn);
+  
+          setLoggedIn(loggedIn);
+          // setIsLoading(false);
         }
-
-        /* If db returns {authorized: false}, there is no valid session, so log user out of their session with Magic if it exists */
-        // if (!loggedIn) {
-        //   await magic.user.logout();
-        // }
-
-        console.log("LOGGEDIN");
-        console.log(loggedIn);
-
-        setLoggedIn(loggedIn);
-        // setIsLoading(false);
+      }catch(err){
+        console.log(err);
       }
     })();
   }, [magic]);

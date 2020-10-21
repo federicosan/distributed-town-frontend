@@ -3,6 +3,7 @@ import {
   LoggedInContext,
   LoadingContext,
   UserInfoContext,
+  TokenContext,
 } from "../components/Store";
 
 import { useContext, useState, useEffect } from "react";
@@ -17,7 +18,7 @@ function Dashboard() {
   const [userInfo, setUserInfo] = useContext(UserInfoContext);
   const [loggedIn, setLoggedIn] = useContext(LoggedInContext);
   const [magic] = useContext(MagicContext);
-
+  const [token, setToken] = useContext(TokenContext);
   const [numOfMembers, setNumOfMembers] = useState(-1);
   const [liquidityPoolBalance, setLiquidityPoolBalance] = useState(-1);
 
@@ -37,7 +38,11 @@ function Dashboard() {
         contractABI,
         signer
       );
-
+      
+      setUserInfo({
+        ...userInfo,
+        communityContract: { address: contractAddress },
+      });
       // Send transaction to smart contract to update message and wait to finish
       const [nUsers, investedBalance] = await Promise.all([
         contract.numberOfMembers(),
@@ -46,6 +51,7 @@ function Dashboard() {
 
       setNumOfMembers(BigNumber.from(nUsers).toNumber());
       setLiquidityPoolBalance(BigNumber.from(investedBalance).toNumber());
+    
     } catch (err) {
       console.error(err);
     }
@@ -60,44 +66,56 @@ function Dashboard() {
   const router = useRouter();
 
   return (
-    <div className="w-full h-screen flex">
-      <div className="flex flex-col flex-grow space-y-8 px-8 py-4">
-        <h1>Community Dashboard</h1>
-        <h2>Administration</h2>
+    <div className="w-full flex-col h-screen flex">
+    <div className="flex flex-row flex-grow h-6/8">
+      <div className="flex flex-col w-3/5 space-y-8 px-8 py-5 mt-2">
+         <h1 className="underline text-center text-black text-4xl">Community Dashboard</h1>
+        <h2 className="font-bold text-xl text-center">Administration</h2>
+        <div className="flex flex-row">
+        <div className="w-1/5"></div>
+        <div className="flex flex-col w-3/5 justify-center space-y-8">
         <Button onClick={() => router.push("/CommunityTreasury")}>Community Treasury</Button>
         <Button onClick={() => router.push("/gigs")}>Open Gigs</Button>
         <Button>Projects & Proposals</Button>
+        </div> 
+        <div className="w-1/5"></div>
+        </div>
       </div>
-      <div className="bg-blue-100 flex flex-grow justify-center items-center">
-        <div className="flex flex-col border-2 border-blue-600">
-          <div className="bg-blue-600 p-4">
-            <h2>{userInfo.communityContract.name}</h2>
-            <p>Check-up Card</p>
-          </div>
-          <div className="flex flex-col justify-center bg-white p-4 space-y-4">
-            <div className="flex flex-row justify-between">
-              <p>Members</p>
-              <p>{numOfMembers === -1 ? "Loading members..." : numOfMembers}</p>
+      <div className="bg-blue-100 flex w-2/5 justify-center items-center">
+          <div className="flex flex-col border-2 border-blue-600">
+            <div className="bg-blue-600 p-4">
+              <h2>{userInfo.communityId}</h2>
+              <p>Check-up Card</p>
             </div>
-            <div className="flex flex-row justify-between">
-              <p>Open Proposals</p>
-              <p>0</p>
-            </div>
-            <div className="flex flex-row justify-between">
-              <p>Liquidity Pool</p>
-              <p>
-                {liquidityPoolBalance === -1
-                  ? "Loading liquidity pool balance..."
-                  : liquidityPoolBalance}
-              </p>
-            </div>
-            <div className="flex flex-col border-2 border-blue-600 p-4">
-              <p>Scarcity score</p>
-              <p>72</p>
+            <div className="flex flex-col justify-center bg-white p-4 space-y-4">
+              <div className="flex flex-row justify-between">
+                <p>Members</p>
+                <p>{numOfMembers === -1 ? "Loading members..." : numOfMembers}</p>
+              </div>
+              <div className="flex flex-row justify-between">
+                <p>Open Proposals</p>
+                <p>0</p>
+              </div>
+              <div className="flex flex-row justify-between">
+                <p>Liquidity Pool</p>
+                <p>
+                  {liquidityPoolBalance === -1
+                    ? "Loading liquidity pool balance..."
+                    : liquidityPoolBalance}
+                </p>
+              </div>
+              <div className="flex flex-col border-2 border-blue-600 p-4">
+                <p>Scarcity score</p>
+                <p>72</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+  </div>
+      <div className="flex flex-row h-2/8 my-5 justify-center">
+           <Button className="p-4 w-full max-w-none" onClick={() => router.push("/skillWallet")}>Go back to  SkillWallet</Button>
+      
+      </div> 
     </div>
   );
 }

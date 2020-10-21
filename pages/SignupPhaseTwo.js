@@ -3,6 +3,7 @@ import {
   LoggedInContext,
   LoadingContext,
   UserInfoContext,
+  TokenContext
 } from "../components/Store";
 
 import { useContext, useEffect, useState } from "react";
@@ -16,6 +17,7 @@ import { useRouter } from "next/router";
 function SignupPhaseTwo() {
   const [loggedIn, setLoggedIn] = useContext(LoggedInContext);
   const [userInfo, setUserInfo] = useContext(UserInfoContext);
+  const [token, setToken] = useContext(TokenContext);
   const [magic] = useContext(MagicContext);
 
   const router = useRouter();
@@ -38,7 +40,7 @@ function SignupPhaseTwo() {
       let community = communities.filter((community) => community.selected)[0];
 
       const contractABI = communityContractAbi;
-      const contractAddress = community.address;
+      const contractAddress = community.address || "0x790697f595Aa4F9294566be0d262f71b44b5039c";;
       const contract = new ethers.Contract(
         contractAddress,
         contractABI,
@@ -47,7 +49,7 @@ function SignupPhaseTwo() {
 
       setUserInfo({
         ...userInfo,
-        communityContract: { address: contractAddress, name: community.name },
+        communityContract: { _id: community._id, address: contractAddress, name: community.name },
       });
 
       let amountOfRedeemableDitos = 0;
@@ -55,23 +57,69 @@ function SignupPhaseTwo() {
         amountOfRedeemableDitos += redeemableDitos;
       }
 
-      console.log(amountOfRedeemableDitos);
-
       // Send transaction to smart contract to update message and wait to finish
       const tx = await contract.join(amountOfRedeemableDitos);
 
       // Wait for transaction to finish
       const receipt = await tx.wait();
+      
+      await updateUser(community);
 
-      console.log(receipt);
-
-      router.push("/SignupCompleted");
+      
     } catch (err) {
       console.error(err);
     } finally {
       setIsJoining(false);
     }
   }
+   
+  async function updateUser(community){
+   console.log('community in updateuser',community);
+   console.log('community in updateduser ID IDI IDIDIDIDIDIDI', community,id);
+
+   try{
+    let currentToken = token;
+    console.log('1 ct',currentToken);
+    const responseFetchToken = await magic.user.getIdToken();
+    const didToken = await responseFetchToken;
+    if(token !== didToken ) {
+      currentToken = didToken;
+      setToken(didToken);
+    } 
+
+    console.log('2 ct',currentToken);
+
+    console.log('updated skills userinfo',userInfo);
+
+      const payload =  {
+        username: userInfo.nickname,
+        communityID: community._id,
+         skills: userInfo.userSkilss,
+      };
+      console.log('payload',payload);
+      const response = await fetch(`http://localhost:3005/api/user`,
+       {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: new Headers({
+          Authorization: "Bearer " +  currentToken,
+          'Content-Type': 'application/json'
+        })
+        });
+
+      const updatedUser = await response.json();
+      console.log(updateUser);
+      
+      router.push("/SignupCompleted");
+
+
+    } catch(err){
+
+      console.log(err);
+    }
+  }
+
+
 
   useEffect(() => {
     (async () => {
@@ -81,12 +129,14 @@ function SignupPhaseTwo() {
         let communitiesToAdd = new Map();
         for await (let { skill } of userInfo.skills) {
           let communities = await fetch(
-            `http://3.250.21.129:3005/api/community?skill=${skill}`,
+            `http://localhost:3005/api/community?skill=${skill}`,
             {
               method: "GET",
             }
           );
           communities = await communities.json();
+
+          console.log('communities',communities);
 
           communities.map((community) => {
             return { ...community, selected: false };
@@ -145,7 +195,7 @@ function SignupPhaseTwo() {
           <div className="border-2 border-blue-600 p-4 flex flex-col space-y-4">
             {userInfo.skills.map((skill, i) => {
               return (
-                <div className="grid grid-cols-2">
+                <div key={i} className="grid grid-cols-2">
                   <div className="flex flex-col">
                     <p>{skill.skill}</p>
                     <p>{skill.level.toString().padEnd(2, "0")}%</p>
